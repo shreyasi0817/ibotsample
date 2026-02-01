@@ -1,0 +1,89 @@
+import numpy as np
+from google.colab import files
+import matplotlib.pyplot as plt
+import cv2
+
+uploaded = files.upload()
+
+
+
+if len(uploaded) == 0:
+    raise Exception("No file was uploaded! Please upload an image.")
+image_path = list(uploaded.keys())[0]
+
+def pencil_sketch (image_path):
+    image = cv2.imread(image_path)
+    height = image.shape[0]
+    width = image.shape[1]
+    blur_kernel =int( 0.04 * min(height, width))
+    if blur_kernel % 2 == 0:
+        blur_kernel += 1
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    inverted_gray = 255 - gray_image
+    blurred_invgray= cv2.GaussianBlur(inverted_gray, (blur_kernel, blur_kernel), 0)
+    blurred_gray = 255 - blurred_invgray
+    pencil_img =  cv2.divide(gray_image, blurred_gray, scale =256.0)
+    return pencil_img, image
+
+
+def colour_sketch (image_path):
+     image = cv2.imread(image_path)
+     height = image.shape[0]
+     width = image.shape[1]
+     blur_kernel = int(0.05 * min(height, width))
+     if blur_kernel % 2 == 0:
+        blur_kernel += 1
+     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+     inverted_gray = 255 - gray_image
+     blurred_invgray = cv2.GaussianBlur(inverted_gray, (31,31), 0)
+     pencil_img = cv2.divide(gray_image, 255 - blurred_invgray, scale=256.0)
+     color_smooth = cv2.GaussianBlur(image, (25,25), 0)
+     hsv = cv2.cvtColor(color_smooth, cv2.COLOR_BGR2HSV)
+     hsv[:, :, 2] = cv2.normalize(hsv[:, :, 2], None, 200, 255, cv2.NORM_MINMAX)
+     color_soft = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+     sketch_3ch = cv2.cvtColor(pencil_img, cv2.COLOR_GRAY2BGR)
+     colour_pencil = cv2.addWeighted(sketch_3ch, 0.60, color_soft, 0.40, 0)
+     colour_pencil_final = cv2.cvtColor(colour_pencil, cv2.COLOR_BGR2RGB)
+
+     return colour_pencil_final
+
+
+def anime(image_path):
+  img = cv2.imread(image_path)
+  bilateral_img = cv2.bilateralFilter(img, 9, 75, 75)
+  gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+  gray_medianblur = cv2.medianBlur(gray_img, 3)
+  edge_dect = cv2.adaptiveThreshold(gray_medianblur, 255,
+                                    cv2.ADAPTIVE_THRESH_MEAN_C,
+                                    cv2.THRESH_BINARY, 9, 2)
+  edge_dect = cv2.bitwise_not(edge_dect)
+  edges_colored = cv2.cvtColor(edge_dect, cv2.COLOR_GRAY2BGR)
+  cartoon_image = cv2.addWeighted(bilateral_img, 0.8, edges_colored, 0.2, 0)
+  cartoon_image = cv2.convertScaleAbs(cartoon_image, alpha=1.5, beta=30)
+
+  return cartoon_image
+
+
+pencil_sketched, original = pencil_sketch(image_path)
+color_pencil = colour_sketch(image_path)
+i_tried_smt = anime(image_path)
+
+fig, ax = plt.subplots(2, 2, figsize=(10, 5))
+
+ax[0,0].imshow(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
+ax[0,0].set_title("Original")
+ax[0,0].axis("off")
+
+ax[1,0].imshow(pencil_sketched, cmap="gray")
+ax[1,0].set_title("Pencil Sketch")
+ax[1,0].axis("off")
+
+ax[0,1].imshow(cv2.cvtColor(i_tried_smt, cv2.COLOR_BGR2RGB))
+ax[0,1].set_title("Anime/Cartoon")
+ax[0,1].axis("off")
+
+ax[1,1].imshow(color_pencil)
+ax[1,1].set_title("Colour Sketch")
+ax[1,1].axis("off")
+
+plt.show()
