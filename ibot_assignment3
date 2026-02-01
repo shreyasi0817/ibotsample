@@ -1,7 +1,5 @@
 
 # train.py
-
-import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,16 +16,13 @@ data_dir = "data"
 # Data augmentation
 train_transforms = transforms.Compose([
     transforms.Resize(256),
-    transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),     
+    transforms.RandomCrop(224, scale=(0.8, 0.8)),     
     transforms.RandomHorizontalFlip(),                        
     transforms.RandomRotation(15),                           
     transforms.ColorJitter(brightness=0.2,
                            contrast=0.2,
                            saturation=0.2,
-                           hue=0.1),                          
-    transforms.RandomAffine(degrees=0,
-                            translate=(0.05, 0.05),
-                            shear=5),                         
+                           hue=0.1),                                                
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406],
                          [0.229, 0.224, 0.225]),
@@ -75,8 +70,6 @@ model.fc = nn.Linear(num_features, 2)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
-print(f"Using device: {device}")
-print(f"Training only final layer: {num_features} -> 2")
 
 ########################
 # 3. Training Setup    #
@@ -216,8 +209,6 @@ ax2.legend()
 plt.tight_layout()
 plt.savefig("training_curves.png")
 plt.show()
-
-# Confusion matrix
 cm = confusion_matrix(all_labels, all_preds)
 plt.figure(figsize=(8, 6))
 sns.heatmap(cm, annot=True, fmt="d",
