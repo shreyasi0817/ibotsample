@@ -1,0 +1,154 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+import pandas as pd
+from google.colab import files
+
+uploaded = files.upload()
+
+if len(uploaded) == 0:
+    raise Exception("No file was uploaded! Please upload an image.")
+image_path = list(uploaded.keys())[0]
+
+def preprocessing(image_path):
+    image = cv2.imread(image_path)
+    height, width = image.shape[:2]
+    if max(height, width) > 1000:
+      scale = 1000/max(height, width)
+      image = cv2.resize(image, (int(width *scale), int(height*scale)))
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_blurred = cv2.GaussianBlur(gray_image, (19,19), 0)
+    equalized_blurred_gray = cv2.equalizeHist(gray_blurred)
+
+    return equalized_blurred_gray
+
+
+    #this is the version of dynamically changing parameters, for fixed parameters we just fix param1=100, param2=30, minRadius = 10, maxRadius = 100
+    # and minDist = 10 
+
+def circle_detection(equalized_blurred_gray,dp =1.2, param1=100, param2=30,):
+  height, width = equalized_blurred_gray.shape[:2]
+  dynamic = min(height, width)
+  minRadius = int(dynamic * 0.03)
+  maxRadius = int(dynamic * 0.1)
+  minDist = int(0.8*minRadius)
+  best_circles = None
+  best_score = float('inf')
+  for param2 in range(30, 10 , -5):
+    circle_detected = cv2.HoughCircles(equalized_blurred_gray, cv2.HOUGH_GRADIENT, dp, minDist, param1=param1, param2=param2, minRadius=minRadius, maxRadius=maxRadius)
+    if circle_detected == None:
+      continue
+    radii = circle_detected[0][:,2]
+    radius_ratio = np.std(radii) / np.mean(radii)
+    if radius_ratio < best_score:
+        best_score = radius_ratio
+        best_circles = circle_detected
+    if radius_ratio > 0.5:
+        continue 
+  cv2.destroyAllWindows()
+  return best_circles
+
+def visualise_circles(image, circles, save_path = None):
+  if circles is not None:
+    circles = circles[0]
+    for i in range(len(circles)):
+      x,y,r = circles[i]
+      x, y, r = int(x), int(y), int(r)
+      cv2.circle(image, (x,y), r, (0,255,0), 2)
+      cv2.circle(image, (x,y), 1, (0,0,255), 3)
+
+      cv2.putText(
+                image,
+                f"Circle {i+1}",
+                (x - 20, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 0),
+                1
+            )
+  final_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+  return final_image
+
+
+def interactive_circle_detection(equalized_blurred_gray):
+  cv2.namedWindow('circle_detection')
+
+  def nothing(x):
+      pass
+
+  cv2.createTrackbar('param2', 'circle_detection', 30, 100, nothing )
+  cv2.createTrackbar('minRadius', 'circle_detection', 10, 100, nothing )
+  cv2.createTrackbar('maxRadius', 'circle_detection', 50, 200, nothing )
+  param2 = cv2.getTrackbarPos('param2', 'circle_detection')
+  minRadius = cv2.getTrackbarPos('minRadius', 'circle_detection')
+  maxRadius = cv2.getTrackbarPos('maxRadius', 'circle_detection')
+
+  while True:
+    param2 = cv2.getTrackbarPos('param2', 'circle_detection')
+    minRadius = cv2.getTrackbarPos('minRadius', 'circle_detection')
+    maxRadius = cv2.getTrackbarPos('maxRadius', 'circle_detection')
+    if minRadius <= 0 or maxRadius <= minRadius:
+            continue
+    if cv2.waitKey(30) & 0xFF == 27:  # ESC to exit
+            break
+    circle_detected = cv2.HoughCircles(equalized_blurred_gray, cv2.HOUGH_GRADIENT,dp = 1.2,minDist = int(0.3*minRadius), param1 = 100, param2 = param2, minRadius = minRadius, maxRadius = maxRadius)
+
+    if circles is not None:
+            circles = np.uint16(np.around(circles))
+            final_circles = circles
+
+            for x, y, r in circles[0]:
+                cv2.circle(display, (x, y), r, (0, 255, 0), 2)
+                cv2.circle(display, (x, y), 1, (0, 0, 255), 3)
+
+        cv2.imshow('circle_detection', display)
+
+  return final_circles
+
+
+def calculate_statistics(circles):
+  if circles is None :
+    total_circles = 0
+    average_radius = 0
+    max_radius = 0
+    min_radius = 0
+  else:
+    circles = circles[0]
+    total_circles = circles.shape[0]
+    average_radius = np.mean(circles[:,2])
+    max_radius = np.max(circles[:,2])
+    min_radius = np.min(circles[:,2])
+
+  statistics = pd.DataFrame({
+      'total circles':[total_circles],
+      'average_radius':[average_radius],
+      "maximum radius":[max_radius],
+      'minimum radius':[min_radius]
+  })
+
+  return statistics
+
+def main(image_path, mode = 'auto'):
+  img = cv2.imread(image_path)
+  pre = preprocessing(image_path)
+  if mode == 'auto' :
+    circles = circle_detection(pre)
+    final_image = visualise_circles(img, circles)
+    statistics = calculate_statistics(circles)
+    return final_image, statistics
+  if mode == 'interactive':
+    circles = interactive_circle_detection(pre)
+    final_image = visualise_circles(img, circles)
+    statistics = calculate_statistics(circles)
+    return final_image, statistics
+
+if __name__ == "__main__":
+    main(image_path)
+
+final_image, statistics = main(image_path)
+
+
+
+fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+ax[0].imshow(final_image)
+plt.axis('off')
