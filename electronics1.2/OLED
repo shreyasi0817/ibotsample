@@ -1,0 +1,29 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+Adafruit_SSD1306 d(128, 64, &Wire);
+
+void setup()
+{
+  d.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  d.clearDisplay();
+  d.setTextSize(1);
+  d.setTextColor(WHITE);
+  d.setCursor(0, 0);
+  d.print("Hello World");
+
+  d.drawRect(10, 20, 50, 30, WHITE);
+
+  d.drawLine(90, 20, 110, 20, WHITE);
+  d.drawLine(110, 20, 120, 35, WHITE);
+  d.drawLine(120, 35, 100, 50, WHITE);
+  d.drawLine(100, 50, 80, 35, WHITE);
+  d.drawLine(80, 35, 90, 20, WHITE);
+
+  d.display();
+}
+
+void loop()
+{
+}
