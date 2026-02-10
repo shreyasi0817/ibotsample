@@ -1,0 +1,22 @@
+void setup()
+{
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  int v = analogRead(A0);
+
+  if(v > 600)
+  {
+    Serial.print("black, Value = ");
+    Serial.println(v);
+  }
+  else
+  {
+    Serial.print("white, Value = ");
+    Serial.println(v);
+  }
+
+  delay(200);
+}
