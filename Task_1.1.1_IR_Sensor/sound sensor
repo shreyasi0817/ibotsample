@@ -1,0 +1,17 @@
+int s = 2;
+
+void setup()
+{
+  pinMode(s, INPUT);
+  pinMode(13, OUTPUT);
+}
+
+void loop()
+{
+  if(digitalRead(s) == HIGH)
+  {
+    digitalWrite(13, HIGH);
+    delay(2000);
+    digitalWrite(13, LOW);
+  }
+}
