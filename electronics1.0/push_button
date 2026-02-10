@@ -1,0 +1,24 @@
+int b = 2;
+int led = 9;
+int s = 0;
+int last = HIGH;
+
+void setup()
+{
+  pinMode(b, INPUT_PULLUP);
+  pinMode(led, OUTPUT);
+}
+
+void loop()
+{
+  int v = digitalRead(b);
+
+  if(v == LOW && last == HIGH)
+  {
+    s = !s;
+    digitalWrite(led, s);
+    delay(200);
+  }
+
+  last = v;
+}
